@@ -1,0 +1,701 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>StudioCam Pro - Câmera Virtual Avançada</title>
+<style>
+  * {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    user-select: none;
+  }
+
+  body {
+    background: linear-gradient(135deg, #0a0a0a 0%, #1a1a2e 100%);
+    font-family: 'Segoe UI', 'Poppins', system-ui, -apple-system, sans-serif;
+    min-height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 20px;
+  }
+
+  .studio-container {
+    background: rgba(0, 0, 0, 0.75);
+    border-radius: 32px;
+    padding: 20px;
+    box-shadow: 0 25px 45px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.1);
+    backdrop-filter: blur(12px);
+  }
+
+  .camera-wrapper {
+    position: relative;
+    width: 854px;
+    height: 480px;
+    border-radius: 24px;
+    overflow: hidden;
+    box-shadow: 0 12px 35px rgba(0,0,0,0.6);
+    background: #000;
+    cursor: crosshair;
+  }
+
+  #video {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    filter: brightness(1.02) contrast(1.05);
+    transform: scaleX(1);
+  }
+
+  #overlay {
+    position: absolute;
+    cursor: move;
+    transform-origin: center center;
+    box-shadow: 0 0 0 3px rgba(0, 255, 255, 0.5), 0 10px 25px rgba(0,0,0,0.4);
+    border-radius: 16px;
+    transition: box-shadow 0.15s ease;
+    pointer-events: auto;
+    filter: drop-shadow(0 6px 12px rgba(0,0,0,0.3));
+  }
+
+  #overlay.dragging {
+    box-shadow: 0 0 0 4px #00ffff, 0 15px 30px black;
+    cursor: grabbing;
+  }
+
+  /* CONTROLES JUNTOS E COMPACTOS */
+  .all-controls {
+    margin-top: 20px;
+    background: rgba(10, 10, 20, 0.7);
+    backdrop-filter: blur(12px);
+    border-radius: 28px;
+    padding: 18px 22px;
+    border: 1px solid rgba(255,255,255,0.12);
+  }
+
+  .controls-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 18px;
+    justify-content: space-between;
+    align-items: flex-start;
+  }
+
+  .ctrl-card {
+    background: rgba(0, 0, 0, 0.55);
+    border-radius: 20px;
+    padding: 14px 18px;
+    flex: 1;
+    min-width: 170px;
+    backdrop-filter: blur(4px);
+    border: 1px solid rgba(255,255,255,0.08);
+    transition: all 0.2s;
+  }
+
+  .ctrl-card:hover {
+    border-color: rgba(0, 255, 255, 0.3);
+    background: rgba(0, 0, 0, 0.7);
+  }
+
+  .ctrl-title {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: #cae9ff;
+    font-size: 0.8rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 12px;
+    border-left: 3px solid #0ff;
+    padding-left: 10px;
+  }
+
+  input[type="range"] {
+    width: 100%;
+    height: 5px;
+    -webkit-appearance: none;
+    background: linear-gradient(90deg, #2ecc71, #3498db, #9b59b6);
+    border-radius: 5px;
+    outline: none;
+    cursor: pointer;
+  }
+
+  input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 18px;
+    height: 18px;
+    background: white;
+    border-radius: 50%;
+    border: 2px solid #0ff;
+    cursor: pointer;
+    box-shadow: 0 0 8px cyan;
+  }
+
+  .value-badge {
+    display: inline-block;
+    background: #0a0a1a;
+    padding: 3px 10px;
+    border-radius: 30px;
+    font-size: 0.7rem;
+    font-family: monospace;
+    color: #0ff;
+    margin-left: 8px;
+    font-weight: bold;
+  }
+
+  .button-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 12px;
+  }
+
+  button {
+    background: linear-gradient(135deg, #1f2b3e, #141a2a);
+    border: none;
+    color: #eef5ff;
+    padding: 6px 12px;
+    border-radius: 40px;
+    cursor: pointer;
+    font-weight: 600;
+    font-size: 0.75rem;
+    transition: all 0.2s ease;
+    border: 1px solid rgba(255,255,255,0.1);
+    backdrop-filter: blur(4px);
+  }
+
+  button:hover {
+    background: linear-gradient(135deg, #2f405e, #1f2b3e);
+    transform: scale(1.02);
+    box-shadow: 0 2px 10px rgba(0,200,255,0.3);
+    border-color: rgba(0,255,255,0.4);
+  }
+
+  .upload-area {
+    background: rgba(0, 0, 0, 0.6);
+    border: 2px dashed #4a90e2;
+    border-radius: 18px;
+    padding: 8px 12px;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.2s;
+    font-size: 0.75rem;
+    font-weight: 500;
+    color: white;
+  }
+
+  .upload-area:hover {
+    background: rgba(74,144,226,0.2);
+    border-color: #0ff;
+  }
+
+  .coord-info {
+    font-size: 0.7rem;
+    font-family: monospace;
+    background: #000000aa;
+    padding: 5px 10px;
+    border-radius: 20px;
+    display: inline-block;
+    margin-top: 6px;
+    color: #aaffdd;
+    letter-spacing: 0.5px;
+  }
+
+  .badge {
+    text-align: center;
+    margin-top: 16px;
+    font-size: 0.7rem;
+    color: #9bbdff;
+    background: rgba(0,0,0,0.4);
+    padding: 6px 12px;
+    border-radius: 50px;
+    display: inline-block;
+    width: auto;
+  }
+
+  .flex-badge {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    margin-top: 10px;
+    gap: 10px;
+  }
+
+  .cam-status {
+    font-size: 0.7rem;
+    background: #0a0f1f;
+    padding: 4px 12px;
+    border-radius: 20px;
+    color: #0ff;
+  }
+
+  @media (max-width: 920px) {
+    .camera-wrapper { width: 100%; height: auto; aspect-ratio: 854/480; }
+    .controls-grid { flex-direction: column; gap: 12px; }
+    .ctrl-card { width: 100%; }
+  }
+</style>
+</head>
+<body>
+
+<div class="studio-container">
+  <div class="camera-wrapper" id="cameraContainer">
+    <video id="video" autoplay playsinline muted></video>
+    <img id="overlay" alt="overlay image" style="display: none;" />
+  </div>
+
+  <!-- TODOS OS CONTROLES AGRUPADOS EM UM PAINEL ÚNICO -->
+  <div class="all-controls">
+    <div class="controls-grid">
+      
+      <!-- Grupo 1: IMAGEM / SOBREPOSIÇÃO (GALERIA CORRIGIDA) -->
+      <div class="ctrl-card">
+        <div class="ctrl-title">
+          <span>🖼️</span> SOBREPOSIÇÃO
+        </div>
+        <div class="upload-area" id="uploadTrigger">
+          📂 Clique para abrir Galeria
+          <input type="file" id="upload" accept="image/*" style="display: none;">
+        </div>
+        <div class="button-row">
+          <button id="resetPositionBtn">⟳ Centralizar</button>
+          <button id="resetAllBtn">🔄 Reset</button>
+          <button id="removeOverlayBtn">🗑 Remover</button>
+        </div>
+      </div>
+
+      <!-- Grupo 2: ZOOM + PRESETS -->
+      <div class="ctrl-card">
+        <div class="ctrl-title">
+          <span>🔍</span> ZOOM <span id="zoomVal" class="value-badge">1.00x</span>
+        </div>
+        <input type="range" id="zoom" min="0.3" max="4" step="0.01" value="1">
+        <div class="button-row">
+          <button data-zoom="0.5">50%</button>
+          <button data-zoom="1">100%</button>
+          <button data-zoom="2">200%</button>
+          <button data-zoom="3">300%</button>
+        </div>
+      </div>
+
+      <!-- Grupo 3: ROTAÇÃO + PRESETS -->
+      <div class="ctrl-card">
+        <div class="ctrl-title">
+          <span>🔄</span> ROTAÇÃO <span id="rotVal" class="value-badge">0°</span>
+        </div>
+        <input type="range" id="rotate" min="-180" max="180" step="1" value="0">
+        <div class="button-row">
+          <button data-rot="0">0°</button>
+          <button data-rot="90">90°</button>
+          <button data-rot="-90">-90°</button>
+          <button data-rot="180">180°</button>
+        </div>
+      </div>
+
+      <!-- Grupo 4: POSIÇÃO (arrastar + setas) -->
+      <div class="ctrl-card">
+        <div class="ctrl-title">
+          <span>🎮</span> POSIÇÃO (Arraste)
+        </div>
+        <div class="coord-info" id="coordDisplay">x: 0px | y: 0px</div>
+        <div class="button-row">
+          <button id="moveLeftBtn">◀ Esq</button>
+          <button id="moveRightBtn">Dir ▶</button>
+          <button id="moveUpBtn">▲ Cima</button>
+          <button id="moveDownBtn">Baixo ▼</button>
+        </div>
+      </div>
+    </div>
+    
+    <div class="flex-badge">
+      <div class="badge">
+        ✨ Dica: Arraste a imagem sobre o vídeo | Use rotação/zoom para efeitos profissionais
+      </div>
+      <div id="camStatus" class="cam-status">📷 Iniciando câmera...</div>
+    </div>
+  </div>
+</div>
+
+<script>
+  (function() {
+    // Elementos principais
+    const video = document.getElementById('video');
+    const overlay = document.getElementById('overlay');
+    const container = document.getElementById('cameraContainer');
+    const zoomSlider = document.getElementById('zoom');
+    const rotateSlider = document.getElementById('rotate');
+    const zoomVal = document.getElementById('zoomVal');
+    const rotVal = document.getElementById('rotVal');
+    const coordDisplay = document.getElementById('coordDisplay');
+    const camStatus = document.getElementById('camStatus');
+    
+    // Estado da overlay
+    let currentZoom = 1;
+    let currentRotate = 0;
+    let isOverlayVisible = false;
+    
+    // Dimensões base
+    let baseWidth = 280;
+    let baseHeight = 210;
+    
+    let posX = 0;
+    let posY = 0;
+    
+    // ===================== MELHORIA NA CÂMERA =====================
+    // Função avançada para iniciar a câmera com alta qualidade e fallback
+    async function initCamera() {
+      try {
+        // Configuração profissional: prioriza alta resolução e 60fps se possível
+        const constraints = {
+          video: {
+            width: { ideal: 1920, min: 640 },
+            height: { ideal: 1080, min: 480 },
+            frameRate: { ideal: 30, min: 24 },
+            facingMode: "user" // câmera frontal (para selfie, pode mudar para "environment" se quiser traseira)
+          }
+        };
+        
+        const stream = await navigator.mediaDevices.getUserMedia(constraints);
+        video.srcObject = stream;
+        await video.play();
+        camStatus.innerHTML = "📷 Câmera ATIVA ✅";
+        camStatus.style.color = "#2ecc71";
+        console.log("Câmera iniciada com sucesso!");
+      } catch (err) {
+        console.error("Erro ao acessar câmera:", err);
+        camStatus.innerHTML = "⚠️ Câmera não disponível (permissão ou hardware)";
+        camStatus.style.color = "#e67e22";
+        // Fallback: vídeo de teste com padrão colorido ou mensagem
+        video.style.background = "#111";
+        const fallbackCanvas = document.createElement('canvas');
+        fallbackCanvas.width = container.clientWidth;
+        fallbackCanvas.height = container.clientHeight;
+        const ctx = fallbackCanvas.getContext('2d');
+        ctx.fillStyle = "#1a1a2e";
+        ctx.fillRect(0, 0, fallbackCanvas.width, fallbackCanvas.height);
+        ctx.fillStyle = "#88aaff";
+        ctx.font = "bold 20px 'Segoe UI'";
+        ctx.textAlign = "center";
+        ctx.fillText("📸 Câmera indisponível", fallbackCanvas.width/2, fallbackCanvas.height/2);
+        ctx.font = "14px monospace";
+        ctx.fillStyle = "#aaa";
+        ctx.fillText("Permita o acesso à câmera ou use uma imagem sobreposta", fallbackCanvas.width/2, fallbackCanvas.height/2 + 40);
+        const fallbackStream = fallbackCanvas.captureStream(30);
+        video.srcObject = fallbackStream;
+        video.play().catch(e=>console.log);
+      }
+    }
+    
+    // Iniciar câmera imediatamente
+    initCamera();
+    
+    // ===================== FUNÇÕES DA OVERLAY =====================
+    function updateOverlayTransform() {
+      if (!isOverlayVisible) return;
+      overlay.style.transform = `translate(${posX}px, ${posY}px) scale(${currentZoom}) rotate(${currentRotate}deg)`;
+      overlay.style.left = '0px';
+      overlay.style.top = '0px';
+      const centerX = overlay.offsetWidth / 2;
+      const centerY = overlay.offsetHeight / 2;
+      overlay.style.transformOrigin = `${centerX}px ${centerY}px`;
+      coordDisplay.innerText = `x: ${Math.round(posX)}px | y: ${Math.round(posY)}px | rot: ${currentRotate}°`;
+    }
+    
+    function clampImagePosition() {
+      if (!isOverlayVisible) return;
+      const scaledWidth = overlay.offsetWidth * currentZoom;
+      const scaledHeight = overlay.offsetHeight * currentZoom;
+      // limites generosos, mas mantém dentro da tela na maioria
+      const minX = -scaledWidth * 0.25;
+      const maxX = container.clientWidth - scaledWidth * 0.75;
+      const minY = -scaledHeight * 0.25;
+      const maxY = container.clientHeight - scaledHeight * 0.75;
+      posX = Math.min(Math.max(posX, minX), maxX);
+      posY = Math.min(Math.max(posY, minY), maxY);
+      if (isNaN(posX)) posX = (container.clientWidth - overlay.offsetWidth) / 2;
+      if (isNaN(posY)) posY = (container.clientHeight - overlay.offsetHeight) / 2;
+      updateOverlayTransform();
+    }
+    
+    function setImageDefaultSize(imgElement) {
+      const maxW = container.clientWidth * 0.68;
+      const maxH = container.clientHeight * 0.68;
+      let width = imgElement.naturalWidth;
+      let height = imgElement.naturalHeight;
+      if (width <= 0 || height <= 0) {
+        width = 400;
+        height = 300;
+      }
+      if (width > maxW) {
+        height = (height * maxW) / width;
+        width = maxW;
+      }
+      if (height > maxH) {
+        width = (width * maxH) / height;
+        height = maxH;
+      }
+      baseWidth = Math.max(70, width);
+      baseHeight = Math.max(70, height);
+      overlay.style.width = baseWidth + 'px';
+      overlay.style.height = baseHeight + 'px';
+      // centralizar
+      posX = (container.clientWidth - baseWidth) / 2;
+      posY = (container.clientHeight - baseHeight) / 2;
+      updateOverlayTransform();
+    }
+    
+    // Carregar imagem da galeria (CORRIGIDO: garante que o seletor de arquivos abre)
+    function loadImageFromFile(file) {
+      if (!file) return;
+      // Verificar se é imagem
+      if (!file.type.startsWith('image/')) {
+        alert("Por favor, selecione um arquivo de imagem (PNG, JPG, GIF, etc)");
+        return;
+      }
+      const url = URL.createObjectURL(file);
+      overlay.style.display = 'block';
+      overlay.onload = () => {
+        URL.revokeObjectURL(url);
+        setImageDefaultSize(overlay);
+        isOverlayVisible = true;
+        // sincronizar sliders de zoom/rotação
+        currentZoom = parseFloat(zoomSlider.value);
+        currentRotate = parseInt(rotateSlider.value);
+        updateOverlayTransform();
+        zoomVal.innerText = currentZoom.toFixed(2) + 'x';
+        rotVal.innerText = currentRotate + '°';
+        clampImagePosition();
+      };
+      overlay.onerror = () => {
+        console.error("Erro ao carregar imagem");
+        overlay.style.display = 'none';
+        isOverlayVisible = false;
+        alert("Falha ao carregar imagem. Tente outro arquivo.");
+      };
+      overlay.src = url;
+    }
+    
+    // ===================== EVENTOS DOS CONTROLES =====================
+    zoomSlider.addEventListener('input', () => {
+      currentZoom = parseFloat(zoomSlider.value);
+      zoomVal.innerText = currentZoom.toFixed(2) + 'x';
+      if (isOverlayVisible) {
+        updateOverlayTransform();
+        clampImagePosition();
+      }
+    });
+    
+    rotateSlider.addEventListener('input', () => {
+      currentRotate = parseInt(rotateSlider.value);
+      rotVal.innerText = currentRotate + '°';
+      if (isOverlayVisible) updateOverlayTransform();
+    });
+    
+    // Botões zoom rápido
+    document.querySelectorAll('[data-zoom]').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        const val = parseFloat(btn.getAttribute('data-zoom'));
+        if (!isNaN(val)) {
+          zoomSlider.value = val;
+          currentZoom = val;
+          zoomVal.innerText = val.toFixed(2) + 'x';
+          if (isOverlayVisible) {
+            updateOverlayTransform();
+            clampImagePosition();
+          }
+        }
+      });
+    });
+    
+    document.querySelectorAll('[data-rot]').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        const val = parseInt(btn.getAttribute('data-rot'));
+        if (!isNaN(val)) {
+          rotateSlider.value = val;
+          currentRotate = val;
+          rotVal.innerText = val + '°';
+          if (isOverlayVisible) updateOverlayTransform();
+        }
+      });
+    });
+    
+    // Drag & Drop aprimorado (mouse e toque)
+    let isDragging = false;
+    let dragStartX = 0, dragStartY = 0;
+    let initialPosX = 0, initialPosY = 0;
+    
+    function getDragCoords(e) {
+      let clientX, clientY;
+      if (e.touches) {
+        clientX = e.touches[0].clientX;
+        clientY = e.touches[0].clientY;
+      } else {
+        clientX = e.clientX;
+        clientY = e.clientY;
+      }
+      return { clientX, clientY };
+    }
+    
+    function onDragStart(e) {
+      if (!isOverlayVisible) return;
+      e.preventDefault();
+      isDragging = true;
+      const { clientX, clientY } = getDragCoords(e);
+      const rect = overlay.getBoundingClientRect();
+      dragStartX = clientX - rect.left;
+      dragStartY = clientY - rect.top;
+      initialPosX = posX;
+      initialPosY = posY;
+      overlay.classList.add('dragging');
+    }
+    
+    function onDragMove(e) {
+      if (!isDragging || !isOverlayVisible) return;
+      e.preventDefault();
+      const { clientX, clientY } = getDragCoords(e);
+      const containerRect = container.getBoundingClientRect();
+      let newX = clientX - containerRect.left - dragStartX;
+      let newY = clientY - containerRect.top - dragStartY;
+      posX = newX;
+      posY = newY;
+      clampImagePosition();
+      updateOverlayTransform();
+    }
+    
+    function onDragEnd() {
+      if (isDragging) {
+        isDragging = false;
+        overlay.classList.remove('dragging');
+      }
+    }
+    
+    overlay.addEventListener('mousedown', onDragStart);
+    window.addEventListener('mousemove', onDragMove);
+    window.addEventListener('mouseup', onDragEnd);
+    overlay.addEventListener('touchstart', onDragStart, { passive: false });
+    window.addEventListener('touchmove', onDragMove, { passive: false });
+    window.addEventListener('touchend', onDragEnd);
+    
+    // Botões de movimento
+    const MOVE_STEP = 16;
+    document.getElementById('moveLeftBtn').addEventListener('click', () => {
+      if (!isOverlayVisible) return;
+      posX -= MOVE_STEP;
+      clampImagePosition();
+      updateOverlayTransform();
+    });
+    document.getElementById('moveRightBtn').addEventListener('click', () => {
+      if (!isOverlayVisible) return;
+      posX += MOVE_STEP;
+      clampImagePosition();
+      updateOverlayTransform();
+    });
+    document.getElementById('moveUpBtn').addEventListener('click', () => {
+      if (!isOverlayVisible) return;
+      posY -= MOVE_STEP;
+      clampImagePosition();
+      updateOverlayTransform();
+    });
+    document.getElementById('moveDownBtn').addEventListener('click', () => {
+      if (!isOverlayVisible) return;
+      posY += MOVE_STEP;
+      clampImagePosition();
+      updateOverlayTransform();
+    });
+    
+    // Centralizar
+    document.getElementById('resetPositionBtn').addEventListener('click', () => {
+      if (!isOverlayVisible) return;
+      posX = (container.clientWidth - overlay.offsetWidth) / 2;
+      posY = (container.clientHeight - overlay.offsetHeight) / 2;
+      clampImagePosition();
+      updateOverlayTransform();
+    });
+    
+    // Reset completo
+    document.getElementById('resetAllBtn').addEventListener('click', () => {
+      if (!isOverlayVisible) return;
+      zoomSlider.value = '1';
+      rotateSlider.value = '0';
+      currentZoom = 1;
+      currentRotate = 0;
+      zoomVal.innerText = '1.00x';
+      rotVal.innerText = '0°';
+      posX = (container.clientWidth - overlay.offsetWidth) / 2;
+      posY = (container.clientHeight - overlay.offsetHeight) / 2;
+      clampImagePosition();
+      updateOverlayTransform();
+    });
+    
+    // Remover overlay
+    document.getElementById('removeOverlayBtn').addEventListener('click', () => {
+      overlay.style.display = 'none';
+      isOverlayVisible = false;
+      overlay.src = '';
+    });
+    
+    // ========== CORREÇÃO GALERIA: Abrir seletor de arquivos corretamente ==========
+    const uploadInput = document.getElementById('upload');
+    const uploadTrigger = document.getElementById('uploadTrigger');
+    
+    // Método robusto para abrir a galeria nativa do dispositivo/desktop
+    uploadTrigger.addEventListener('click', (e) => {
+      e.stopPropagation();
+      // Força a abertura do seletor de arquivos
+      uploadInput.click();
+    });
+    
+    // Quando um arquivo for selecionado, carrega a imagem
+    uploadInput.addEventListener('change', (event) => {
+      if (event.target.files && event.target.files.length > 0) {
+        const file = event.target.files[0];
+        loadImageFromFile(file);
+      }
+      // Limpa o valor para permitir carregar a mesma imagem novamente se necessário
+      uploadInput.value = '';
+    });
+    
+    // Tratamento de redimensionamento da janela
+    function handleWindowResize() {
+      if (!isOverlayVisible) return;
+      // Recalcula limites e evita que a imagem saia da tela
+      clampImagePosition();
+      updateOverlayTransform();
+    }
+    
+    window.addEventListener('resize', () => {
+      setTimeout(handleWindowResize, 100);
+    });
+    
+    // Observer para o container (caso a resolução mude por responsividade)
+    if (typeof ResizeObserver !== 'undefined') {
+      const resizeObserver = new ResizeObserver(() => {
+        if (isOverlayVisible) {
+          clampImagePosition();
+          updateOverlayTransform();
+        }
+      });
+      resizeObserver.observe(container);
+    }
+    
+    // Inicialização da UI: nenhuma imagem visível inicialmente
+    overlay.style.display = 'none';
+    isOverlayVisible = false;
+    
+    // Feedback extra: caso a câmera demore muito, exibir status de loading
+    setTimeout(() => {
+      if (video.srcObject === null && !video.paused) {
+        camStatus.innerHTML = "🔄 Verificando câmera...";
+      }
+    }, 1000);
+    
+    console.log("StudioCam Pro - Câmera e galeria corrigidas e melhoradas");
+  })();
+</script>
+</body>
+</html>
